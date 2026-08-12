@@ -137,6 +137,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
 .xhs-reader-img{height:200px;display:flex;align-items:center;justify-content:center;font-size:48px;color:#fff}
 .xhs-reader-body{padding:16px 16px 100px}
 .xhs-reader-title{font-size:var(--fs-lg);font-weight:600;margin-bottom:8px;line-height:1.4}
+.xhs-real-badge{display:inline-block;vertical-align:middle;background:#FF2442;color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:8px;margin-left:6px;letter-spacing:0.5px}
 .xhs-reader-summary{font-size:var(--fs-md);color:var(--text-primary);line-height:1.7;margin-bottom:16px}
 .xhs-reader-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .xhs-reader-actions{display:flex;gap:8px;margin-bottom:12px}
@@ -747,8 +748,9 @@ var entry=notes[noteIdx%notes.length];
 var ai=hashStr(name+'_author_'+noteIdx,AUTHORS.length);
 var gi=hashStr(name+'_grad_'+noteIdx,IMG_GRADS.length);
 var li=3000+hashStr(name+'_likes_'+noteIdx,12001);
-return {title:entry[0],summary:entry[1],cat:entry[2],author:AUTHORS[ai],img:IMG_GRADS[gi],likes:li,
-link:'https://m.xiaohongshu.com/search?keyword='+encodeURIComponent(name)+'+'+encodeURIComponent(pickXhsSearchKw(getEventTypeByName(name)))};
+var realLink=entry[3]||'';
+return {title:entry[0],summary:entry[1],cat:entry[2],author:AUTHORS[ai],img:IMG_GRADS[gi],likes:li,realLink:realLink,
+link:realLink||('https://m.xiaohongshu.com/search?keyword='+encodeURIComponent(name)+'+'+encodeURIComponent(pickXhsSearchKw(getEventTypeByName(name))))};
 }
 // ===== XHS Batch State (random + 换一批) =====
 var xhsBatchState={};
@@ -917,7 +919,7 @@ h+='</div><button class="xhs-refresh" onclick="refreshAllXhs('+idx+')">🔄</but
 	h+='<div class="xhs-block" onclick="openXhsNote(\''+ev.name.replace(/'/g,'').replace(/\\/g,'\\\\')+'\','+thisNoteIdx+')">';
 if(ev.book)h+='<div class="xhs-booking-bar">🔴 需提前预约 — '+(ev.note||'请提前预约')+'</div>';
 h+='<div class="xhs-img" style="background:'+note.img+'">'+(ev.book?'🏛️':'🏞️')+'</div>';
-h+='<div class="xhs-body"><div class="xhs-title">'+note.title+'</div>';
+h+='<div class="xhs-body"><div class="xhs-title">'+note.title+(note.realLink?' <span class="xhs-real-badge">🔗</span>':'')+'</div>';
 h+='<div class="xhs-summary">'+note.summary+'</div>';
 h+='<div class="xhs-meta"><div class="xhs-author"><span class="av"></span><span>'+note.author+'</span></div>';
 h+='<div style="display:flex;gap:8px;align-items:center"><div class="xhs-likes">❤️ '+note.likes.toLocaleString()+'</div>';
@@ -928,7 +930,7 @@ h+='</div></div></div></div>';
 }
 if(totalShown===0)h+='<div style="text-align:center;padding:40px 20px;color:var(--text-hint);font-size:var(--fs-sm);">该分类暂无推荐笔记</div>';
 h+='<button class="xhs-refresh-more" onclick="refreshAllXhs('+idx+')">🔄 换一批笔记</button>';
-h+='<div style="font-size:var(--fs-xs);color:var(--text-hint);text-align:center;padding:12px 0 4px;line-height:1.5">💡 点击任意笔记卡片可查看完整内容<br>如需更多游记，可复制笔记标题去小红书App搜索</div>';
+h+='<div style="font-size:var(--fs-xs);color:var(--text-hint);text-align:center;padding:12px 0 4px;line-height:1.5">💡 带 🔗 标记的笔记点击后直接跳转小红书App查看真实笔记<br>其余笔记可点击查看内容，或复制标题去小红书App搜索</div>';
 h+='<div class="view-bottom-spacer"></div>';
 h+='</div>';
 return h;
@@ -1154,6 +1156,8 @@ if(!notes||!Array.isArray(notes)||notes.length===0){showToast(name+' 暂无笔�
 var idx=((xhsReaderNoteIdx%notes.length)+notes.length)%notes.length;
 var note=getXhsNoteObj(name,idx);
 if(!note){showToast(name+' 笔记内容加载失败');return;}
+// 已接入真实小红书笔记链接：直接跳转，不再页内预览
+if(note.realLink){window.location.href=note.realLink;return;}
 var faved=isFaved(name);
 var ev=null;
 for(var i=0;i<tripData.length;i++){for(var j=0;j<tripData[i].events.length;j++){if(tripData[i].events[j].name===name){ev=tripData[i].events[j];break;}}if(ev)break;}
@@ -1161,20 +1165,22 @@ var h='';
 if(ev&&ev.book)h+='<div class="xhs-booking-bar">🔴 需提前预约 — '+(ev.note||'请提前预约')+'</div>';
 h+='<div class="xhs-reader-img" style="background:'+note.img+'">'+(ev&&ev.book?'🏛️':'🏞️')+'</div>';
 h+='<div class="xhs-reader-body">';
-h+='<div class="xhs-reader-title">'+note.title+'</div>';
+h+='<div class="xhs-reader-title">'+note.title+(note.realLink?' <span class="xhs-real-badge">🔗 真实笔记</span>':'')+'</div>';
 h+='<div class="xhs-reader-summary">'+note.summary+'</div>';
 h+='<div class="xhs-reader-meta"><div class="xhs-author"><span class="av" style="width:24px;height:24px;"></span><span style="font-size:var(--fs-sm);">'+note.author+'</span></div><div class="xhs-likes" style="font-size:var(--fs-sm);">❤️ '+note.likes.toLocaleString()+' · 第'+(idx+1)+'/'+notes.length+'篇</div></div>';
 h+='<div style="font-size:var(--fs-xs);color:var(--text-hint);margin-bottom:10px;line-height:1.5">📌 该景点共有 <b>'+notes.length+'</b> 篇笔记推荐，下方可查看更多</div>';
 h+='<div class="xhs-reader-actions">';
 h+='<button class="xhs-reader-read" onclick="readInPageXhs()">📖 换一篇看看</button>';
-h+='<button class="xhs-reader-jump" onclick="copyNoteTitle()">📋 复制标题去搜索</button>';
+if(note.realLink){h+='<button class="xhs-reader-jump" onclick="openRealXhs()">🔗 打开真实笔记</button>';}
+else{h+='<button class="xhs-reader-jump" onclick="copyNoteTitle()">📋 复制标题去搜索</button>';}
 h+='</div>';
 h+='<button class="xhs-reader-fav'+(faved?' faved':'')+'" onclick="toggleFavReader()" style="width:100%;padding:10px;border-radius:8px;font-size:var(--fs-sm);cursor:pointer;font-weight:500;margin-bottom:6px">'+(faved?'❤️ 已收藏':'🤍 收藏笔记')+'</button>';
 // Tags
 var tagLabel=getCatLabel(note.cat);
 h+='<div style="margin-bottom:10px"><span style="display:inline-block;background:var(--bg);color:var(--primary);padding:3px 10px;border-radius:12px;font-size:var(--fs-xs);margin-right:6px">#'+tagLabel+'</span><span style="display:inline-block;background:var(--bg);color:var(--text-secondary);padding:3px 10px;border-radius:12px;font-size:var(--fs-xs)">#'+name+'</span></div>';
 // Copy note text hint
-h+='<div style="font-size:var(--fs-xs);color:var(--text-hint);margin-bottom:12px;line-height:1.5">💡 以上为完整笔记内容。如需查看更多真实游记，点击「复制标题去搜索」后打开小红书App粘贴搜索</div>';
+if(note.realLink){h+='<div style="font-size:var(--fs-xs);color:var(--text-success,#2E7D32);margin-bottom:12px;line-height:1.5">🔗 本篇已接入真实小红书笔记，点击下方「打开真实笔记」即可跳转查看原文</div>';}
+else{h+='<div style="font-size:var(--fs-xs);color:var(--text-hint);margin-bottom:12px;line-height:1.5">💡 以上为整理版笔记内容。本篇暂未接入真实链接，可点击「复制标题去搜索」，打开小红书App粘贴搜索同名笔记</div>';}
 // Show more notes from this attraction
 h+='<div style="margin-top:14px"><div style="font-size:var(--fs-sm);font-weight:600;margin-bottom:8px;">📕 '+name+' 更多推荐（点击切换）</div>';
 var shownPool=[];for(var i=0;i<notes.length;i++){if(i!==idx)shownPool.push(i);}
@@ -1203,6 +1209,11 @@ var title=note?note.title:'';
 if(navigator.clipboard&&navigator.clipboard.writeText){
 navigator.clipboard.writeText(title).then(function(){showToast('📋 已复制标题，请在小红书App中粘贴搜索');}).catch(function(){fallbackCopy(title);});
 }else{fallbackCopy(title);}
+}
+function openRealXhs(){
+var note=getXhsNoteObj(xhsReaderName,xhsReaderNoteIdx);
+if(note&&note.realLink){window.location.href=note.realLink;}
+else{showToast('该笔记暂未接入真实链接');}
 }
 function toggleFavReader(){toggleFav(xhsReaderName);openXhsNote(xhsReaderName,xhsReaderNoteIdx);if(curTab==='profile')renderProfile();}
 // ===== Companion Modal =====
